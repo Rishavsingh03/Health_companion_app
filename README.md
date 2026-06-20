@@ -558,7 +558,7 @@ Health:
 8. Server saves the analysis in MongoDB.
 9. Future page loads read saved MongoDB data and do not re-call Gemini.
 
-## Tests And Build
+<!-- ## Tests And Build
 
 Backend tests:
 
@@ -581,7 +581,7 @@ npm --prefix client run build
 Docker local build:
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build -->
 ```
 
 ## Known Issues And Tradeoffs
