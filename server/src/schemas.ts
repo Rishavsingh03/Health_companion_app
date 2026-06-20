@@ -16,10 +16,17 @@ export const createSubmissionSchema = z.object({
 });
 
 export const aiAnalysisSchema = z.object({
+  clinicalMetadata: z
+    .object({
+      deducedSpecialty: z.string().optional()
+    })
+    .optional(),
   patientSummary: z.string().min(1),
   medicines: z.array(
     z.object({
       name: z.string().min(1),
+      originalRawText: z.string().min(1),
+      correctedName: z.string().min(1),
       dosage: z.string().optional(),
       schedule: z.string().optional(),
       duration: z.string().optional(),
@@ -35,4 +42,3 @@ export const aiAnalysisSchema = z.object({
 });
 
 export type AiAnalysis = z.infer<typeof aiAnalysisSchema>;
-

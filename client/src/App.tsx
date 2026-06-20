@@ -472,6 +472,11 @@ function SubmissionDetailPage() {
               <Stethoscope className="h-5 w-5 text-teal" />
               <h2 className="font-semibold">Summary</h2>
             </div>
+            {analysis.clinicalMetadata?.deducedSpecialty ? (
+              <p className="mb-3 text-sm font-medium text-teal">
+                Deduced specialty: {analysis.clinicalMetadata.deducedSpecialty}
+              </p>
+            ) : null}
             <p className="text-sm leading-6 text-slate-700">{analysis.patientSummary}</p>
 
             <h3 className="mt-6 font-semibold">Medicines</h3>
@@ -484,8 +489,10 @@ function SubmissionDetailPage() {
                       {medicine.name}
                     </div>
                     <dl className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-                      <InfoTerm label="Dosage" value={medicine.dosage||"Not Specified"} />
-                      <InfoTerm label="Schedule" value={medicine.schedule||"Not Specified"} />
+                      <InfoTerm label="Raw text" value={medicine.originalRawText || medicine.name} />
+                      <InfoTerm label="Corrected name" value={medicine.correctedName || medicine.name} />
+                      <InfoTerm label="Dosage" value={medicine.dosage || "Not specified"} />
+                      <InfoTerm label="Schedule" value={medicine.schedule || "Not specified"} />
                       <InfoTerm label="Duration" value={medicine.duration || "Not specified"} />
                       <InfoTerm label="Instructions" value={medicine.instructions || "Not specified"} />
                     </dl>

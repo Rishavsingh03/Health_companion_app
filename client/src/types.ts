@@ -5,6 +5,8 @@ export type User = {
 
 export type AiMedicine = {
   name: string;
+  originalRawText: string;
+  correctedName: string;
   dosage?: string;
   schedule?: string;
   duration?: string;
@@ -12,6 +14,9 @@ export type AiMedicine = {
 };
 
 export type AiAnalysis = {
+  clinicalMetadata?: {
+    deducedSpecialty?: string;
+  };
   patientSummary: string;
   medicines: AiMedicine[];
   doctorAdvice: string[];
