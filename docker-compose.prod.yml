@@ -1,0 +1,40 @@
+services:
+  api:
+    image: rishav10431/health-companion-api:latest
+    env_file:
+      - ./server.env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      UPLOAD_DIR: /app/uploads
+      CLIENT_ORIGIN: ${PUBLIC_ORIGIN}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - uploads_data:/app/uploads
+    expose:
+      - "4000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    image: rishav10431/health-companion-web:latest
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  uploads_data:
