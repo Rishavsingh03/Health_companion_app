@@ -27,7 +27,7 @@ function buildResponseSchema(Type: Record<string, string>) {
             duration: { type: Type.STRING },
             instructions: { type: Type.STRING }
           },
-          required: ["name", "dosage", "schedule"]
+          required: ["name"]
         }
       },
       doctorAdvice: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -57,11 +57,16 @@ function buildPrompt(input: AnalyzePrescriptionInput) {
 
   return [
     "You are helping summarize a medical prescription for a patient-facing health companion demo.",
-    "Extract only what is supported by the prescription and the user's notes.",
+    "Use both the prescription and the user's symptom notes. The user's symptom notes are important clinical context and should influence recognizedConditions, lifestyleRecommendations, warnings, and uncertaintyNotes.",
+    "Extract medicines and doctor-written advice from the prescription. For general conditions, warnings, and lifestyle suggestions, you may use careful medical reasoning from the prescription plus user symptoms, but do not present guesses as certain facts.",
+    "If a condition is directly stated in the prescription, include it plainly. If a condition is reasonably inferred from symptoms or medicines, include it with wording like '(inferred from symptoms)' or '(possible, based on medicines/symptoms)'.",
     "The prescription text may contain OCR or PDF-parser noise: random letter sequences, broken words, repeated headers/footers, page numbers, emails, appointment IDs, registration numbers, disclaimers, and contact details.",
     "Ignore text that is clearly administrative metadata or nonsensical parser noise. Do not copy random gibberish into medicines, diagnoses, advice, warnings, or recognized conditions.",
     "If a medically meaningful phrase appears beside noise, keep the meaningful phrase and discard the noise. For example, from 'HIGH FEVER NJKNDJNJKJNNNN', keep 'High fever' and ignore 'NJKNDJNJKJNNNN'.",
     "Only include recognized conditions when they are human-readable and medically plausible from the prescription or symptoms. If a token might be noise, mention uncertainty instead of treating it as a condition.",
+    "For medicines: put composition/ingredients in parentheses beside the medicine name, for example 'Oncet-CF (Cetirizine 5mg + Paracetamol 500mg + Phenylephrine 10mg)'. Do not put composition in dosage, schedule, duration, or instructions.",
+    "If dosage, schedule, duration, or instructions are not clearly present, omit that field or leave it unspecified. Do not invent dosage, timing, or duration from the medicine composition.",
+    "Warnings may include reasonable safety cautions derived from symptoms and medicine ingredients, such as checking allergies, avoiding duplicate paracetamol/acetaminophen use, or consulting a doctor if fever persists. Keep warnings conservative and patient-safe.",
     "Do not diagnose. If something is unclear, say so in uncertaintyNotes.",
     "Always include a clear disclaimer that this is not medical advice and the user should consult a licensed clinician.",
     "",

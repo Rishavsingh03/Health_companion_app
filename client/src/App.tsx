@@ -484,8 +484,8 @@ function SubmissionDetailPage() {
                       {medicine.name}
                     </div>
                     <dl className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-                      <InfoTerm label="Dosage" value={medicine.dosage} />
-                      <InfoTerm label="Schedule" value={medicine.schedule} />
+                      <InfoTerm label="Dosage" value={medicine.dosage||"Not Specified"} />
+                      <InfoTerm label="Schedule" value={medicine.schedule||"Not Specified"} />
                       <InfoTerm label="Duration" value={medicine.duration || "Not specified"} />
                       <InfoTerm label="Instructions" value={medicine.instructions || "Not specified"} />
                     </dl>

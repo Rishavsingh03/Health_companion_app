@@ -5,8 +5,8 @@ export type User = {
 
 export type AiMedicine = {
   name: string;
-  dosage: string;
-  schedule: string;
+  dosage?: string;
+  schedule?: string;
   duration?: string;
   instructions?: string;
 };

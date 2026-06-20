@@ -41,7 +41,7 @@ function validatePrescriptionFiles(files: Express.Multer.File[]) {
   }
 
   const pdfFiles = files.filter((file) => file.mimetype === "application/pdf");
-  const imageFiles = files.filter((file) => file.mimetype === "image/jpeg" || file.mimetype === "image/png");
+  const imageFiles = files.filter((file) => file.mimetype === "image/jpeg" || file.mimetype === "image/png"|| file.mimetype === "image/jpdcg");
 
   if (pdfFiles.length > 0 && files.length > 1) {
     throw new ApiError(400, "Upload either one PDF or up to 5 image pages, not both");
@@ -66,14 +66,14 @@ submissionsRouter.post(
     const uploadedFiles = getUploadedFiles(req);
 
     const parsedInput = createSubmissionSchema.safeParse({
-      symptoms: req.body.symptoms
+      symptoms : req.body.symptoms || "No concern"
     });
-
+    
     if (!parsedInput.success) {
       await deleteUploadedFiles(uploadedFiles);
       throw parsedInput.error;
     }
-
+    //console.log("fdsfs");
     const input = parsedInput.data;
 
     try {
@@ -119,7 +119,6 @@ submissionsRouter.post(
           extractedText = candidateText;
         }
       }
-
       const aiAnalysis = await analyzePrescription({
         symptoms: input.symptoms,
         extractedText,
@@ -133,7 +132,6 @@ submissionsRouter.post(
               }))
             )
       });
-      console.log("fejfj ",aiAnalysis);
 
       submission.status = "completed";
       submission.extractionMode = extractionMode;

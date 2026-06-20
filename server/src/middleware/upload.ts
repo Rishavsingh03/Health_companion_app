@@ -5,7 +5,7 @@ import multer from "multer";
 import { env } from "../config";
 import { ApiError } from "../errors";
 
-const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const allowedMimeTypes = new Set(["image/jpeg","image/jpg", "image/png", "application/pdf"]);
 const maxUploadBytes = 5 * 1024 * 1024;
 
 const storage = multer.diskStorage({

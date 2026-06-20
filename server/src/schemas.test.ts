@@ -27,9 +27,7 @@ describe("aiAnalysisSchema", () => {
       patientSummary: "Patient has a prescription that should be verified with a clinician.",
       medicines: [
         {
-          name: "Example",
-          dosage: "500mg",
-          schedule: "Twice daily"
+          name: "Example"
         }
       ],
       doctorAdvice: ["Take after food"],

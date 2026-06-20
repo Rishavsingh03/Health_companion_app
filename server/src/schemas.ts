@@ -11,7 +11,7 @@ export const createSubmissionSchema = z.object({
   symptoms: z
     .string()
     .trim()
-    .min(3, "Please describe symptoms or health concerns")
+    .min(1, "Please describe symptoms or health concerns")
     .max(2000, "Symptom notes must be under 2000 characters")
 });
 
@@ -20,8 +20,8 @@ export const aiAnalysisSchema = z.object({
   medicines: z.array(
     z.object({
       name: z.string().min(1),
-      dosage: z.string().min(1),
-      schedule: z.string().min(1),
+      dosage: z.string().optional(),
+      schedule: z.string().optional(),
       duration: z.string().optional(),
       instructions: z.string().optional()
     })
