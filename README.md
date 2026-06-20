@@ -558,6 +558,20 @@ Health:
 8. Server saves the analysis in MongoDB.
 9. Future page loads read saved MongoDB data and do not re-call Gemini.
 
+
+## Known Issues And Tradeoffs
+
+- This is a demo app, not production healthcare software.
+- Gemini can misread prescriptions or produce incomplete output.
+- Users must verify all medicine and dosage information with a licensed clinician.
+- HTTP deployment is supported; HTTPS requires extra TLS/domain setup.
+- `COOKIE_SECURE=false` is acceptable only for local/HTTP demo deployments.
+- Uploaded files are stored in a Docker volume, not S3.
+- Docker volume data is tied to the host and must be backed up separately.
+- MongoDB Atlas is external, so deployment requires Atlas credentials and IP allowlisting.
+- The AI request runs synchronously during upload, so users wait for Gemini.
+- No reminders, email notifications, rate limiting, password reset, or email verification in this version.
+
 <!-- ## Tests And Build
 
 Backend tests:
@@ -581,18 +595,5 @@ npm --prefix client run build
 Docker local build:
 
 ```bash
-docker compose up -d --build -->
-```
-
-## Known Issues And Tradeoffs
-
-- This is a demo app, not production healthcare software.
-- Gemini can misread prescriptions or produce incomplete output.
-- Users must verify all medicine and dosage information with a licensed clinician.
-- HTTP deployment is supported; HTTPS requires extra TLS/domain setup.
-- `COOKIE_SECURE=false` is acceptable only for local/HTTP demo deployments.
-- Uploaded files are stored in a Docker volume, not S3.
-- Docker volume data is tied to the host and must be backed up separately.
-- MongoDB Atlas is external, so deployment requires Atlas credentials and IP allowlisting.
-- The AI request runs synchronously during upload, so users wait for Gemini.
-- No reminders, email notifications, rate limiting, password reset, or email verification in this version.
+docker compose up -d --build
+``` -->
