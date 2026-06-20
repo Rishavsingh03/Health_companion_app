@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { env } from "../config";
 import { aiAnalysisSchema, type AiAnalysis } from "../schemas";
 
@@ -10,6 +11,60 @@ type AnalyzePrescriptionInput = {
     originalName?: string;
   }>;
 };
+
+export type GeminiTokenUsage = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  cachedContentTokenCount?: number;
+  thoughtsTokenCount?: number;
+  toolUsePromptTokenCount?: number;
+};
+
+export type GeminiAnalysisMetadata = {
+  provider: "gemini";
+  model: string;
+  operation: "prescription_analysis";
+  durationMs: number;
+  tokenUsage: GeminiTokenUsage;
+  rawUsageMetadata?: Record<string, unknown>;
+};
+
+type AnalyzePrescriptionResult = {
+  analysis: AiAnalysis;
+  metadata?: GeminiAnalysisMetadata;
+};
+
+function readNumber(value: Record<string, unknown> | undefined, key: keyof GeminiTokenUsage) {
+  const candidate = value?.[key];
+  return typeof candidate === "number" ? candidate : undefined;
+}
+
+export function buildGeminiMetadata(input: {
+  model: string;
+  durationMs: number;
+  usageMetadata?: Record<string, unknown> | null;
+}): GeminiAnalysisMetadata {
+  const rawUsageMetadata = input.usageMetadata
+    ? Object.fromEntries(Object.entries(input.usageMetadata))
+    : undefined;
+
+  return {
+    provider: "gemini",
+    model: input.model,
+    operation: "prescription_analysis",
+    durationMs: Math.max(0, Math.round(input.durationMs)),
+    tokenUsage: {
+      promptTokenCount: readNumber(rawUsageMetadata, "promptTokenCount"),
+      candidatesTokenCount: readNumber(rawUsageMetadata, "candidatesTokenCount"),
+      totalTokenCount: readNumber(rawUsageMetadata, "totalTokenCount"),
+      cachedContentTokenCount: readNumber(rawUsageMetadata, "cachedContentTokenCount"),
+      thoughtsTokenCount: readNumber(rawUsageMetadata, "thoughtsTokenCount"),
+      toolUsePromptTokenCount: readNumber(rawUsageMetadata, "toolUsePromptTokenCount")
+    },
+    rawUsageMetadata
+  };
+}
 
 function buildResponseSchema(Type: Record<string, string>) {
   return {
@@ -110,9 +165,9 @@ function mockAnalysis(input: AnalyzePrescriptionInput): AiAnalysis {
   };
 }
 
-export async function analyzePrescription(input: AnalyzePrescriptionInput) {
+export async function analyzePrescription(input: AnalyzePrescriptionInput): Promise<AnalyzePrescriptionResult> {
   if (env.AI_MOCK_MODE) {
-    return mockAnalysis(input);
+    return { analysis: mockAnalysis(input) };
   }
 
   if (!env.GEMINI_API_KEY) {
@@ -142,6 +197,7 @@ export async function analyzePrescription(input: AnalyzePrescriptionInput) {
     });
   }
 
+  const startedAt = performance.now();
   const response = await ai.models.generateContent({
     model: env.GEMINI_MODEL,
     contents: [
@@ -155,9 +211,18 @@ export async function analyzePrescription(input: AnalyzePrescriptionInput) {
       responseSchema: responseSchema as any
     }
   });
+  const durationMs = performance.now() - startedAt;
 
   const rawText = response.text ?? "";
   const parsed = parseJsonResponse(rawText);
+  const analysis = aiAnalysisSchema.parse(parsed);
 
-  return aiAnalysisSchema.parse(parsed);
+  return {
+    analysis,
+    metadata: buildGeminiMetadata({
+      model: env.GEMINI_MODEL,
+      durationMs,
+      usageMetadata: response.usageMetadata as Record<string, unknown> | undefined
+    })
+  };
 }

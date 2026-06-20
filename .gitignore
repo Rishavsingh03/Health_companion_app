@@ -6,3 +6,4 @@ uploads/
 server/uploads/
 *.log
 .DS_Store
+DECISIONS.md
