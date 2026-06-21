@@ -72,13 +72,26 @@ flowchart LR
 - Nginx routing for React and `/api`
 - EC2 deployment through Docker images
 
-## Skipped Or Not Yet Implemented
+## AI Analysis Flow
+
+1. User uploads a prescription and symptom notes.
+2. Server validates auth, file type, file count, file size, and notes.
+3. For PDFs, server tries embedded text extraction first.
+4. If text is useful, Gemini receives extracted text.
+5. If text is weak or upload is an image, Gemini receives file bytes.
+6. Gemini returns structured JSON.
+7. Server validates the JSON with Zod.
+8. Server saves the analysis in MongoDB.
+9. Future page loads read saved MongoDB data and do not re-call Gemini.
+
+## Future Scope
 
 - Medicine reminders and notifications
 - Email verification and password reset
 - Refresh-token rotation and account lockout
 - Rate limiting
 - Background job queue for long Gemini requests
+- Bounded retry/fallback handling for transient Gemini API failures, for example retrying a failed request a few times with exponential backoff before returning a clear error to the user
 - S3/object storage for uploaded files
 - Local OCR engine such as Tesseract
 - HTTPS termination in this repository
@@ -546,19 +559,6 @@ Health:
 - `submissions`: user ID, symptoms, file metadata, extraction mode, extracted text, status, AI analysis, error message, timestamps
 - `metadata`: Gemini operation, model, response time, token usage, raw usage metadata, linked user/submission
 
-## AI Analysis Flow
-
-1. User uploads a prescription and symptom notes.
-2. Server validates auth, file type, file count, file size, and notes.
-3. For PDFs, server tries embedded text extraction first.
-4. If text is useful, Gemini receives extracted text.
-5. If text is weak or upload is an image, Gemini receives file bytes.
-6. Gemini returns structured JSON.
-7. Server validates the JSON with Zod.
-8. Server saves the analysis in MongoDB.
-9. Future page loads read saved MongoDB data and do not re-call Gemini.
-
-
 ## Known Issues And Tradeoffs
 
 - This is a demo app, not production healthcare software.
@@ -570,7 +570,9 @@ Health:
 - Docker volume data is tied to the host and must be backed up separately.
 - MongoDB Atlas is external, so deployment requires Atlas credentials and IP allowlisting.
 - The AI request runs synchronously during upload, so users wait for Gemini.
+- Gemini can occasionally fail because of transient network, quota, or provider-side issues; the current version surfaces a clear error, while a future version should use bounded retries instead of an infinite loop.
 - No reminders, email notifications, rate limiting, password reset, or email verification in this version.
+
 
 <!-- ## Tests And Build
 
@@ -595,5 +597,5 @@ npm --prefix client run build
 Docker local build:
 
 ```bash
-docker compose up -d --build
-``` -->
+docker compose up -d --build -->
+```
