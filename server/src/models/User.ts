@@ -13,6 +13,17 @@ const userSchema = new Schema(
     passwordHash: {
       type: String,
       required: true
+    },
+    isVerified: {
+      type: Boolean,
+      required: true,
+      default: false
+    },
+    otpHash: {
+      type: String
+    },
+    otpExpiresAt: {
+      type: Date
     }
   },
   { timestamps: true }

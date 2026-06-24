@@ -41,10 +41,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function signup(email: string, password: string) {
-  return request<{ user: User }>("/auth/signup", {
+export function signup(email: string, password: string, confirmPassword: string) {
+  return request<{ message: string; email: string }>("/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, confirmPassword })
+  });
+}
+
+export function verifyOtp(email: string, otp: string) {
+  return request<{ message: string; email: string }>("/auth/verify-otp", {
+    method: "POST",
+    body: JSON.stringify({ email, otp })
+  });
+}
+
+export function resendOtp(email: string) {
+  return request<{ message: string }>("/auth/resend-otp", {
+    method: "POST",
+    body: JSON.stringify({ email })
   });
 }
 

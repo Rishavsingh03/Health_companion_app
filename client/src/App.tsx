@@ -20,7 +20,7 @@ import {
   Stethoscope,
   Upload
 } from "lucide-react";
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createReminder,
   createSubmission,
@@ -32,8 +32,10 @@ import {
   listSubmissions,
   login,
   logout,
+  resendOtp,
   signup,
-  updateReminder
+  updateReminder,
+  verifyOtp
 } from "./api";
 import type { AiMedicine, Reminder, SubmissionDetail, SubmissionListItem, User } from "./types";
 
@@ -147,6 +149,7 @@ function Shell({ children }: { children: ReactNode }) {
 function AuthPage({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { setUser } = useAuth();
@@ -159,7 +162,23 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
     setError("");
 
     try {
-      const response = isSignup ? await signup(email, password) : await login(email, password);
+      if (isSignup) {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match");
+          return;
+        }
+
+        const response = await signup(email, password, confirmPassword);
+        navigate("/verify-email", {
+          state: {
+            email: response.email,
+            message: response.message
+          }
+        });
+        return;
+      }
+
+      const response = await login(email, password);
       setUser(response.user);
       navigate("/");
     } catch (err) {
@@ -206,6 +225,20 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
             />
           </label>
 
+          {isSignup ? (
+            <label className="block">
+              <span className="label">Confirm password</span>
+              <input
+                className="input"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+            </label>
+          ) : null}
+
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           <button className="btn-primary w-full justify-center" type="submit" disabled={submitting}>
@@ -218,6 +251,127 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
           {isSignup ? "Already have an account?" : "New here?"}{" "}
           <Link className="font-medium text-teal hover:underline" to={isSignup ? "/login" : "/signup"}>
             {isSignup ? "Login" : "Create account"}
+          </Link>
+        </p>
+      </div>
+    </Shell>
+  );
+}
+
+function VerifyEmailPage() {
+  const location = useLocation();
+  const state = (location.state as { email?: string; message?: string } | null) ?? {};
+  const [email, setEmail] = useState(state.email ?? "");
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState(state.message ?? "");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [verified, setVerified] = useState(false);
+
+  async function handleVerify(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await verifyOtp(email, otp);
+      setVerified(true);
+      setMessage(response.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not verify OTP");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (!email) {
+      setError("Enter your email before requesting a new code");
+      return;
+    }
+
+    setResending(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await resendOtp(email);
+      setMessage(response.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend OTP");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <Shell>
+      <div className="mx-auto max-w-md">
+        <div className="mb-6 flex items-center gap-3">
+          <ShieldCheck className="h-6 w-6 text-teal" />
+          <div>
+            <h1 className="text-2xl font-semibold">Verify email</h1>
+            <p className="text-sm text-slate-600">Enter the 6-digit code sent to your email.</p>
+          </div>
+        </div>
+
+        <form className="space-y-4 rounded-md border border-emerald-100 bg-white p-5" onSubmit={handleVerify}>
+          <label className="block">
+            <span className="label">Email</span>
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+
+          <label className="block">
+            <span className="label">Verification code</span>
+            <input
+              className="input"
+              type="text"
+              value={otp}
+              onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              required
+            />
+          </label>
+
+          {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+          {verified ? (
+            <Link className="btn-primary w-full justify-center" to="/login">
+              Go to login
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <button className="btn-primary w-full justify-center" type="submit" disabled={submitting}>
+              {submitting ? "Verifying..." : "Verify email"}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
+
+          <button
+            className="btn-secondary w-full justify-center"
+            type="button"
+            onClick={handleResend}
+            disabled={resending || verified}
+          >
+            {resending ? "Sending..." : "Resend code"}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Already verified?{" "}
+          <Link className="font-medium text-teal hover:underline" to="/login">
+            Login
           </Link>
         </p>
       </div>
@@ -730,6 +884,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route
           path="/"
           element={
