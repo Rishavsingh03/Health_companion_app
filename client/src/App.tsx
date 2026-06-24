@@ -22,16 +22,20 @@ import {
 } from "lucide-react";
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import {
+  createReminder,
   createSubmission,
+  deleteReminder,
   fileUrl,
   getMe,
   getSubmission,
+  listReminders,
   listSubmissions,
   login,
   logout,
-  signup
+  signup,
+  updateReminder
 } from "./api";
-import type { SubmissionDetail, SubmissionListItem, User } from "./types";
+import type { AiMedicine, Reminder, SubmissionDetail, SubmissionListItem, User } from "./types";
 
 type AuthContextValue = {
   user: User | null;
@@ -400,18 +404,29 @@ function NewSubmissionPage() {
 
 function SubmissionDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminderTimes, setReminderTimes] = useState<Record<string, string>>({});
+  const [reminderError, setReminderError] = useState("");
+  const [busyReminder, setBusyReminder] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!id) return;
 
-    getSubmission(id)
-      .then((response) => setSubmission(response.submission))
+    Promise.all([
+      getSubmission(id),
+      user ? listReminders(user.id).catch(() => ({ success: false, data: [] as Reminder[] })) : Promise.resolve({ success: false, data: [] as Reminder[] })
+    ])
+      .then(([submissionResponse, remindersResponse]) => {
+        setSubmission(submissionResponse.submission);
+        setReminders(remindersResponse.data);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load analysis"))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -430,6 +445,79 @@ function SubmissionDetailPage() {
   }
 
   const analysis = submission.aiAnalysis;
+
+  function reminderForMedicine(medicineName: string) {
+    return reminders.find((reminder) => reminder.medicineName === medicineName);
+  }
+
+  function reminderInputValue(medicineName: string) {
+    return reminderTimes[medicineName] ?? reminderForMedicine(medicineName)?.reminderTime ?? "";
+  }
+
+  function setReminderInputValue(medicineName: string, reminderTime: string) {
+    setReminderTimes((current) => ({
+      ...current,
+      [medicineName]: reminderTime
+    }));
+  }
+
+  async function handleSaveReminder(medicine: AiMedicine) {
+    const reminderTime = reminderInputValue(medicine.name);
+
+    if (!reminderTime) {
+      setReminderError("Please choose a reminder time");
+      return;
+    }
+
+    const existing = reminderForMedicine(medicine.name);
+    setBusyReminder(medicine.name);
+    setReminderError("");
+
+    try {
+      const payload = {
+        medicineName: medicine.name,
+        dosage: medicine.dosage || "Not specified",
+        frequency: medicine.schedule || "Not specified",
+        reminderTime
+      };
+      const response = existing
+        ? await updateReminder(existing.id, { reminderTime })
+        : await createReminder(payload);
+
+      setReminders((current) => {
+        const withoutCurrent = current.filter((reminder) => reminder.id !== response.data.id);
+        const withoutSameMedicine = withoutCurrent.filter(
+          (reminder) => reminder.medicineName !== response.data.medicineName
+        );
+
+        return [response.data, ...withoutSameMedicine];
+      });
+      setReminderInputValue(medicine.name, response.data.reminderTime);
+    } catch (err) {
+      setReminderError(err instanceof Error ? err.message : "Could not save reminder");
+    } finally {
+      setBusyReminder("");
+    }
+  }
+
+  async function handleDeleteReminder(medicineName: string) {
+    const existing = reminderForMedicine(medicineName);
+
+    if (!existing) return;
+
+    setBusyReminder(medicineName);
+    setReminderError("");
+
+    try {
+      await deleteReminder(existing.id);
+      setReminders((current) => current.filter((reminder) => reminder.id !== existing.id));
+      setReminderInputValue(medicineName, "");
+    } catch (err) {
+      setReminderError(err instanceof Error ? err.message : "Could not delete reminder");
+    } finally {
+      setBusyReminder("");
+    }
+  }
 
   return (
     <Shell>
@@ -480,6 +568,7 @@ function SubmissionDetailPage() {
             <p className="text-sm leading-6 text-slate-700">{analysis.patientSummary}</p>
 
             <h3 className="mt-6 font-semibold">Medicines</h3>
+            {reminderError ? <p className="mt-3 text-sm text-red-600">{reminderError}</p> : null}
             <div className="mt-3 grid gap-3">
               {analysis.medicines.length > 0 ? (
                 analysis.medicines.map((medicine, index) => (
@@ -496,6 +585,42 @@ function SubmissionDetailPage() {
                       <InfoTerm label="Duration" value={medicine.duration || "Not specified"} />
                       <InfoTerm label="Instructions" value={medicine.instructions || "Not specified"} />
                     </dl>
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <div className="flex flex-wrap items-end gap-3">
+                        <label>
+                          <span className="label">Daily email reminder</span>
+                          <input
+                            className="input w-36"
+                            type="time"
+                            value={reminderInputValue(medicine.name)}
+                            onChange={(event) => setReminderInputValue(medicine.name, event.target.value)}
+                          />
+                        </label>
+                        <button
+                          className="btn-secondary"
+                          type="button"
+                          disabled={busyReminder === medicine.name}
+                          onClick={() => handleSaveReminder(medicine)}
+                        >
+                          {reminderForMedicine(medicine.name) ? "Update reminder" : "Set reminder"}
+                        </button>
+                        {reminderForMedicine(medicine.name) ? (
+                          <button
+                            className="btn-secondary"
+                            type="button"
+                            disabled={busyReminder === medicine.name}
+                            onClick={() => handleDeleteReminder(medicine.name)}
+                          >
+                            Delete reminder
+                          </button>
+                        ) : null}
+                      </div>
+                      {reminderForMedicine(medicine.name) ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          Reminder active at {reminderForMedicine(medicine.name)?.reminderTime} IST.
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 ))
               ) : (

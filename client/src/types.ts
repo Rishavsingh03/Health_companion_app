@@ -53,3 +53,16 @@ export type SubmissionDetail = SubmissionListItem & {
   extractedText?: string;
   aiAnalysis?: AiAnalysis;
 };
+
+export type Reminder = {
+  id: string;
+  userId: string;
+  medicineName: string;
+  dosage: string;
+  frequency: string;
+  reminderTime: string;
+  email: string;
+  agendaJobId: string;
+  isActive: boolean;
+  createdAt: string;
+};  

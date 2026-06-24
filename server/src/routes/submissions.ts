@@ -157,6 +157,7 @@ submissionsRouter.post(
 
       res.status(201).json({ submission: serializeSubmission(submission, true) });
     } catch (error) {
+      console.log("Gemini analysis failed : ",error);
       submission.status = "failed";
       submission.errorMessage = error instanceof Error ? error.message : "Analysis failed";
       await submission.save();

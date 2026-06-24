@@ -241,6 +241,7 @@ export async function analyzePrescription(input: AnalyzePrescriptionInput): Prom
   }
 
   const startedAt = performance.now();
+  console.log("analyze before ");
   const response = await ai.models.generateContent({
     model: env.GEMINI_MODEL,
     contents: [
@@ -254,6 +255,7 @@ export async function analyzePrescription(input: AnalyzePrescriptionInput): Prom
       responseSchema: responseSchema as any
     }
   });
+  console.log("Analyze after");
   const durationMs = performance.now() - startedAt;
 
   const rawText = response.text ?? "";

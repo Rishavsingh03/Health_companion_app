@@ -68,6 +68,7 @@ flowchart LR
 - User-visible medical disclaimer
 - Mock AI mode for local testing
 - MongoDB persistence for users, submissions, AI analysis, and metadata
+- Daily medicine reminder emails using Agenda.js and Gmail SMTP
 - Dockerized frontend and backend
 - Nginx routing for React and `/api`
 - EC2 deployment through Docker images
@@ -86,7 +87,7 @@ flowchart LR
 
 ## Future Scope
 
-- Medicine reminders and notifications
+- External push/SMS notification channels
 - Email verification and password reset
 - Refresh-token rotation and account lockout
 - Rate limiting
@@ -117,6 +118,8 @@ UPLOAD_DIR=uploads
 AI_MOCK_MODE=true
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
+EMAIL_USER=
+EMAIL_PASSWORD=
 ```
 
 For real Gemini:
@@ -162,6 +165,8 @@ UPLOAD_DIR=/app/uploads
 AI_MOCK_MODE=false
 GEMINI_API_KEY=<your_google_ai_studio_key>
 GEMINI_MODEL=gemini-2.5-flash
+EMAIL_USER=<your_gmail_address>
+EMAIL_PASSWORD=<your_gmail_app_password>
 PORT=4000
 ```
 
@@ -170,6 +175,8 @@ PORT=4000
 - `MONGODB_URI`: MongoDB Atlas -> Cluster -> Connect -> Drivers -> Node.js connection string. Add `/health-companion` before the query string.
 - `JWT_SECRET`: generate a long random string, for example `openssl rand -hex 32`.
 - `GEMINI_API_KEY`: create an API key in Google AI Studio.
+- `EMAIL_USER`: Gmail address used to send medicine reminder emails.
+- `EMAIL_PASSWORD`: Gmail app password for `EMAIL_USER`; do not use your normal Gmail account password.
 - `PUBLIC_ORIGIN`: browser-facing URL, such as `http://localhost` or `http://<EC2_PUBLIC_IP>`.
 - `COOKIE_SECURE`: `false` for HTTP, `true` only when HTTPS is configured.
 
@@ -461,6 +468,8 @@ UPLOAD_DIR=/app/uploads
 AI_MOCK_MODE=false
 GEMINI_API_KEY=<your_google_ai_studio_key>
 GEMINI_MODEL=gemini-2.5-flash
+EMAIL_USER=<your_gmail_address>
+EMAIL_PASSWORD=<your_gmail_app_password>
 PORT=4000
 ```
 
@@ -549,6 +558,13 @@ Submissions:
 - `GET /api/submissions/:id/file`
 - `GET /api/submissions/:id/files/:fileIndex`
 
+Reminders:
+
+- `POST /api/reminders`
+- `GET /api/reminders/:userId`
+- `PATCH /api/reminders/:id`
+- `DELETE /api/reminders/:id`
+
 Health:
 
 - `GET /api/health`
@@ -571,7 +587,8 @@ Health:
 - MongoDB Atlas is external, so deployment requires Atlas credentials and IP allowlisting.
 - The AI request runs synchronously during upload, so users wait for Gemini.
 - Gemini can occasionally fail because of transient network, quota, or provider-side issues; the current version surfaces a clear error, while a future version should use bounded retries instead of an infinite loop.
-- No reminders, email notifications, rate limiting, password reset, or email verification in this version.
+- Reminder delivery depends on Gmail SMTP credentials and is best-effort; failed email sends are logged by the scheduler.
+- No push/SMS notifications, rate limiting, password reset, or email verification in this version.
 
 
 <!-- ## Tests And Build

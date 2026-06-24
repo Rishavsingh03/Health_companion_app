@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { env } from "./config";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { authRouter } from "./routes/auth";
+import{ reminderRouter } from "./routes/reminderRoutes"
 import { submissionsRouter } from "./routes/submissions";
 
 export function createApp() {
@@ -32,6 +33,7 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/submissions", submissionsRouter);
+  app.use("/api/reminders",reminderRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

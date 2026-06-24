@@ -1,11 +1,11 @@
-import type { SubmissionDetail, SubmissionListItem, User } from "./types";
+import type { Reminder, SubmissionDetail, SubmissionListItem, User } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
 
 type ApiErrorPayload = {
   error?: {
     message?: string;
-  };
+  } | string;
 };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -26,7 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
     try {
       const payload = (await response.json()) as ApiErrorPayload;
-      message = payload.error?.message ?? message;
+      message = typeof payload.error === "string" ? payload.error : payload.error?.message ?? message;
     } catch {
       message = response.statusText || message;
     }
@@ -86,4 +86,38 @@ export function fileUrl(submissionId: string, fileIndex?: number) {
   }
 
   return `${API_BASE_URL}/submissions/${submissionId}/file`;
+}
+
+export function listReminders(userId: string) {
+  return request<{ success: boolean; data: Reminder[] }>(`/reminders/${userId}`);
+}
+
+export function createReminder(input: {
+  medicineName: string;
+  dosage: string;
+  frequency: string;
+  reminderTime: string;
+}) {
+  return request<{ success: boolean; data: Reminder }>("/reminders", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function updateReminder(
+  id: string,
+  input: {
+    reminderTime: string;
+  }
+) {
+  return request<{ success: boolean; data: Reminder }>(`/reminders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export function deleteReminder(id: string) {
+  return request<{ success: boolean; data: Reminder }>(`/reminders/${id}`, {
+    method: "DELETE"
+  });
 }
